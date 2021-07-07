@@ -40,11 +40,12 @@ type Route struct {
 	SvType  string
 	Service string
 	Method  string
+	ServerId string
 }
 
 // NewRoute creates a new route
 func NewRoute(server, service, method string) *Route {
-	return &Route{server, service, method}
+	return &Route{server, service, method,""}
 }
 
 // String transforms the route into a string
@@ -77,4 +78,15 @@ func Decode(route string) (*Route, error) {
 		logger.Log.Errorf("invalid route: " + route)
 		return nil, ErrInvalidRoute
 	}
+}
+
+// Decode decodes the route
+func DecodeWithServerId(route,serverId string) (*Route, error) {
+	r,err := Decode(route)
+	if err != nil {
+		return nil,err
+	}
+
+	r.ServerId = serverId
+	return r,nil
 }

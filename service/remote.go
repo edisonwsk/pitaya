@@ -97,15 +97,17 @@ func (r *RemoteService) remoteProcess(
 	res, err := r.remoteCall(ctx, server, protos.RPCType_Sys, route, a.Session, msg)
 	switch msg.Type {
 	case message.Request:
-		if err != nil {
+		if err != nil && err.Error() != constants.ErrReturnNil.Error() {
 			logger.Log.Errorf("Failed to process remote server: %s", err.Error())
 			a.AnswerWithError(ctx, msg.ID, err)
 			return
 		}
-		err := a.Session.ResponseMID(ctx, msg.ID, res.Data)
-		if err != nil {
-			logger.Log.Errorf("Failed to respond to remote server: %s", err.Error())
-			a.AnswerWithError(ctx, msg.ID, err)
+		if res != nil {
+			err := a.Session.ResponseMIDWithRoute(ctx, msg.ID,fmt.Sprintf("%s_ret",msg.Route), res.Data)
+			if err != nil {
+				logger.Log.Errorf("Failed to respond to remote server: %s", err.Error())
+				a.AnswerWithError(ctx, msg.ID, err)
+			}
 		}
 	case message.Notify:
 		defer tracing.FinishSpan(ctx, err)
@@ -434,7 +436,7 @@ func (r *RemoteService) remoteCall(
 	}
 
 	res, err := r.rpcClient.Call(ctx, rpcType, route, session, msg, target)
-	if err != nil {
+	if err != nil && err.Error() != constants.ErrReturnNil.Error() {
 		logger.Log.Errorf("error making call to target with id %s and host %s: %w", target.ID, target.Hostname, err)
 		return nil, err
 	}

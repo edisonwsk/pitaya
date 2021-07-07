@@ -40,6 +40,7 @@ import (
 type NetworkEntity interface {
 	Push(route string, v interface{}) error
 	ResponseMID(ctx context.Context, mid uint, v interface{}, isError ...bool) error
+	ResponseMIDWithRoute(ctx context.Context, mid uint,route string, v interface{}, isError ...bool) error
 	Close() error
 	Kick(ctx context.Context) error
 	RemoteAddr() net.Addr
@@ -51,6 +52,7 @@ var (
 	afterBindCallbacks   = make([]func(ctx context.Context, s *Session) error, 0)
 	// SessionCloseCallbacks contains global session close callbacks
 	SessionCloseCallbacks = make([]func(s *Session), 0)
+	SessionCreateCallbacks = make([]func(s *Session) error, 0)
 	sessionsByUID         sync.Map
 	sessionsByID          sync.Map
 	sessionIDSvc          = newSessionIDService()
@@ -188,6 +190,17 @@ func OnSessionClose(f func(s *Session)) {
 	SessionCloseCallbacks = append(SessionCloseCallbacks, f)
 }
 
+func OnSessionCreate(f func(s *Session) error)  {
+	sf1 := reflect.ValueOf(f)
+	for _, fun := range SessionCreateCallbacks {
+		sf2 := reflect.ValueOf(fun)
+		if sf1.Pointer() == sf2.Pointer() {
+			return
+		}
+	}
+	SessionCreateCallbacks = append(SessionCreateCallbacks, f)
+}
+
 // CloseAll calls Close on all sessions
 func CloseAll() {
 	logger.Log.Debugf("closing all sessions, %d sessions", SessionCount)
@@ -218,6 +231,10 @@ func (s *Session) Push(route string, v interface{}) error {
 // request message ID
 func (s *Session) ResponseMID(ctx context.Context, mid uint, v interface{}, err ...bool) error {
 	return s.entity.ResponseMID(ctx, mid, v, err...)
+}
+
+func (s *Session) ResponseMIDWithRoute(ctx context.Context, mid uint,route string, v interface{}, err ...bool) error {
+	return s.entity.ResponseMIDWithRoute(ctx, mid,route, v, err...)
 }
 
 // ID returns the session id

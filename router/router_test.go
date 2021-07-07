@@ -63,7 +63,7 @@ func TestDefaultRoute(t *testing.T) {
 
 	router := New()
 
-	retServer := router.defaultRoute(servers)
+	retServer := router.defaultRoute(nil,servers)
 	assert.Equal(t, server, retServer)
 }
 

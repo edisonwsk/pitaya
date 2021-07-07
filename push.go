@@ -72,3 +72,46 @@ func SendPushToUsers(route string, v interface{}, uids []string, frontendType st
 
 	return nil, nil
 }
+
+
+func SendPushToUser(route string, v interface{}, uid string, frontendType string) (bool, error) {
+	data, err := util.SerializeOrRaw(app.serializer, v)
+	if err != nil {
+		return false, err
+	}
+
+	if !app.server.Frontend && frontendType == "" {
+		return false, constants.ErrFrontendTypeNotSpecified
+	}
+
+	var notPushedUids []string
+
+	logger.Log.Debugf("Type=PushToUsers Route=%s, Data=%+v, SvType=%s, #Users=%s", route, v, frontendType, uid)
+
+	if s := session.GetSessionByUID(uid); s != nil && app.server.Type == frontendType {
+		if err := s.Push(route, data); err != nil {
+			notPushedUids = append(notPushedUids, uid)
+			logger.Log.Errorf("Session push protos error, ID=%d, UID=%s, Error=%s",
+				s.ID(), s.UID(), err.Error())
+		}
+	} else if app.rpcClient != nil {
+		push := &protos.Push{
+			Route: route,
+			Uid:   uid,
+			Data:  data,
+		}
+		if err = app.rpcClient.SendPush(uid, &cluster.Server{Type: frontendType}, push); err != nil {
+			notPushedUids = append(notPushedUids, uid)
+			logger.Log.Errorf("RPCClient send protos error, UID=%s, SvType=%s, Error=%s", uid, frontendType, err.Error())
+		}
+	} else {
+		notPushedUids = append(notPushedUids, uid)
+	}
+
+
+	if len(notPushedUids) != 0 {
+		return false, constants.ErrPushingToUsers
+	}
+
+	return true, nil
+}

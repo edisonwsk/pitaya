@@ -46,6 +46,8 @@ const (
 // SessionCtxKey is the context key where the session will be set
 var SessionCtxKey = "session"
 
+var RemoteAddrKey = "remote_addr"
+
 // LoggerCtxKey is the context key where the default logger will be set
 var LoggerCtxKey = "default-logger"
 

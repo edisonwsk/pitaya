@@ -286,7 +286,7 @@ func (h *HandlerService) processMessage(a *agent.Agent, msg *message.Message) {
 	ctx = tracing.StartSpan(ctx, msg.Route, tags)
 	ctx = context.WithValue(ctx, constants.SessionCtxKey, a.Session)
 
-	r, err := route.Decode(msg.Route)
+	r, err := route.DecodeWithServerId(msg.Route,msg.ServerId)
 	if err != nil {
 		logger.Log.Errorf("Failed to decode route: %s", err.Error())
 		a.AnswerWithError(ctx, msg.ID, e.NewError(err, e.ErrBadRequestCode))

@@ -7,7 +7,7 @@ import (
 )
 
 
-type MongoDatabaseStorage struct {
+type DatabaseStorage struct {
 	Base
 	config *config.Config
 
@@ -20,15 +20,15 @@ type MongoDatabaseStorage struct {
 	dbPwd string
 }
 
-func NewMongoDatabaseStorage(conf *config.Config)  *MongoDatabaseStorage {
-	ds := &MongoDatabaseStorage{
+func NewDatabaseStorage(conf *config.Config)  *DatabaseStorage {
+	ds := &DatabaseStorage{
 		config:conf,
 	}
 	ds.configure()
 	return ds
 }
 
-func (c *MongoDatabaseStorage)configure(){
+func (c *DatabaseStorage)configure(){
 	c.dbConnect = c.config.GetString("pitaya.modules.databasestorage.mango.connect")
 	c.dbName = c.config.GetString("pitaya.modules.databasestorage.mango.dbname")
 	c.dbUser = c.config.GetString("pitaya.modules.databasestorage.mango.user")
@@ -36,7 +36,7 @@ func (c *MongoDatabaseStorage)configure(){
 }
 
 // Init was called to initialize the component.
-func (c *MongoDatabaseStorage) Init() error {
+func (c *DatabaseStorage) Init() error {
 	c.ctx= context.Background()
 	cfg :=&qmgo.Config{Uri: c.dbConnect}
 	if len(c.dbUser)>0&&len(c.dbPwd)>0 {
@@ -54,22 +54,22 @@ func (c *MongoDatabaseStorage) Init() error {
 }
 
 // AfterInit was called after the component is initialized.
-func (c *MongoDatabaseStorage) AfterInit() {
+func (c *DatabaseStorage) AfterInit() {
 
 }
 
 // BeforeShutdown was called before the component to shutdown.
-func (c *MongoDatabaseStorage) BeforeShutdown() {
+func (c *DatabaseStorage) BeforeShutdown() {
 
 }
 
 // Shutdown was called to shutdown the component.
-func (c *MongoDatabaseStorage) Shutdown() error {
+func (c *DatabaseStorage) Shutdown() error {
 	return c.client.Close(c.ctx)
 }
 
 
-func (c *MongoDatabaseStorage) GetDB() *qmgo.Database{
+func (c *DatabaseStorage) GetDB() *qmgo.Database{
 	return c.client.Database(c.dbName)
 }
 

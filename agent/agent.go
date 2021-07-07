@@ -135,8 +135,14 @@ func NewAgent(
 
 	// binding session
 	s := session.New(a, true)
+	s.Set(constants.RemoteAddrKey,s.RemoteAddr().String())
 	metrics.ReportNumberOfConnectedClients(metricsReporters, session.SessionCount)
 	a.Session = s
+	err := onSessionCreated(s)
+	if err != nil {
+		logger.Log.Errorf("[NewAgent] failed,error=%s",err.Error())
+		a.chDie <- struct{}{}
+	}
 	return a
 }
 
@@ -253,6 +259,33 @@ func (a *Agent) ResponseMID(ctx context.Context, mid uint, v interface{}, isErro
 	}
 
 	return a.send(pendingMessage{ctx: ctx, typ: message.Response, mid: mid, payload: v, err: err})
+}
+
+// ResponseMID implementation for session.NetworkEntity interface
+// Respond protos to session
+func (a *Agent) ResponseMIDWithRoute(ctx context.Context, mid uint,route string, v interface{}, isError ...bool) error {
+	err := false
+	if len(isError) > 0 {
+		err = isError[0]
+	}
+	if a.GetStatus() == constants.StatusClosed {
+		return errors.NewError(constants.ErrBrokenPipe, errors.ErrClientClosedRequest)
+	}
+
+	if mid <= 0 {
+		return constants.ErrSessionOnNotify
+	}
+
+	switch d := v.(type) {
+	case []byte:
+		logger.Log.Debugf("Type=Response, ID=%d, UID=%s, MID=%d, Data=%dbytes",
+			a.Session.ID(), a.Session.UID(), mid, len(d))
+	default:
+		logger.Log.Infof("Type=Response, ID=%d, UID=%s, MID=%d, Data=%+v",
+			a.Session.ID(), a.Session.UID(), mid, v)
+	}
+
+	return a.send(pendingMessage{ctx: ctx,route:route, typ: message.Response, mid: mid, payload: v, err: err})
 }
 
 // Close closes the agent, cleans inner state and closes low-level connection.
@@ -428,6 +461,18 @@ func (a *Agent) write() {
 			return
 		}
 	}
+}
+
+func onSessionCreated(s *session.Session) error {
+	var err error
+	for _, fn := range session.SessionCreateCallbacks {
+		err = fn(s)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // SendRequest sends a request to a server

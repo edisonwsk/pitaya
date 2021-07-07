@@ -69,6 +69,7 @@ var (
 type Message struct {
 	Type       Type   // message type
 	ID         uint   // unique id, zero while notify mode
+	ServerId string //路由服务器id
 	Route      string // route for locating service
 	Data       []byte // payload
 	compressed bool   // is message compressed
@@ -98,6 +99,11 @@ func (m *Message) String() string {
 
 func routable(t Type) bool {
 	return t == Request || t == Notify || t == Push
+}
+
+func (m *Message) routableWithRoute() bool {
+	t := m.Type
+	return t == Request || (t == Response && m.Route != "") || t == Notify || t == Push
 }
 
 func invalidType(t Type) bool {

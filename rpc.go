@@ -70,7 +70,7 @@ func doSendRPC(ctx context.Context, serverID, routeStr string, reply proto.Messa
 		return constants.ErrReplyShouldBePtr
 	}
 
-	r, err := route.Decode(routeStr)
+	r, err := route.DecodeWithServerId(routeStr,serverID)
 	if err != nil {
 		return err
 	}

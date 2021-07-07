@@ -149,6 +149,11 @@ func (a *Remote) ResponseMID(ctx context.Context, mid uint, v interface{}, isErr
 	return a.send(pendingMessage{ctx: ctx, typ: message.Response, mid: mid, payload: v, err: err}, a.reply)
 }
 
+// ResponseMID reponds the protos with mid to the user
+func (a *Remote) ResponseMIDWithRoute(ctx context.Context, mid uint, route string,v interface{}, isError ...bool) error {
+	return a.ResponseMID(ctx,mid,v,isError...)
+}
+
 // Close closes the remote
 func (a *Remote) Close() error { return nil }
 
@@ -214,7 +219,7 @@ func (a *Remote) sendPush(m pendingMessage, userID string, sv *cluster.Server) (
 
 // SendRequest sends a request to a server
 func (a *Remote) SendRequest(ctx context.Context, serverID, reqRoute string, v interface{}) (*protos.Response, error) {
-	r, err := route.Decode(reqRoute)
+	r, err := route.DecodeWithServerId(reqRoute,serverID)
 	if err != nil {
 		return nil, err
 	}

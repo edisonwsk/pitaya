@@ -95,7 +95,7 @@ func (me *MessagesEncoder) Encode(message *Message) ([]byte, error) {
 		}
 	}
 
-	if routable(message.Type) {
+	if message.routableWithRoute() {
 		if compressed {
 			buf = append(buf, byte((code>>8)&0xFF))
 			buf = append(buf, byte(code&0xFF))
@@ -158,6 +158,12 @@ func Decode(data []byte) (*Message, error) {
 	}
 
 	m.Err = flag&errorMask == errorMask
+
+	//serverId
+	svrLength := data[offset]
+	offset ++
+	m.ServerId = string(data[offset:offset + int(svrLength)])
+	offset += int(svrLength)
 
 	if routable(m.Type) {
 		if flag&msgRouteCompressMask == 1 {

@@ -11,6 +11,7 @@ require (
 	github.com/customerio/gospec v0.0.0-20130710230057-a5cc0e48aa39 // indirect
 	github.com/garyburd/redigo v1.6.0 // indirect
 	github.com/go-playground/validator/v10 v10.4.1
+	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/gogo/protobuf v1.3.0 // indirect
 	github.com/golang/mock v1.4.4
 	github.com/golang/protobuf v1.4.3
