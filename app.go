@@ -408,6 +408,7 @@ func Start() {
 		app.serializer,
 		app.heartbeat,
 		app.config.GetInt("pitaya.buffer.agent.messages"),
+		app.config.GetInt("pitaya.concurrency.handler.dispatch"),
 		app.config.GetInt("pitaya.buffer.handler.localprocess"),
 		app.config.GetInt("pitaya.buffer.handler.remoteprocess"),
 		app.server,
@@ -440,6 +441,9 @@ func Start() {
 	logger.Log.Warn("server is stopping...")
 
 	session.CloseAll()
+	shutdownThreads()
+	shutdownManagers()
+	shutdownDaos()
 	shutdownModules()
 	shutdownComponents()
 }
@@ -476,8 +480,17 @@ func listen() {
 	}
 
 	startModules()
-
 	logger.Log.Info("all modules started!")
+
+	startDaos()
+	logger.Log.Info("all a=daos started!")
+
+	startManagers()
+	logger.Log.Info("all a=managers started!")
+
+	//启动所有逻辑线程
+	startThreads()
+	logger.Log.Info("all threads started!")
 
 	app.running = true
 }

@@ -100,7 +100,7 @@ func TestNewHandlerService(t *testing.T) {
 		packetEncoder,
 		serializer,
 		heartbeatTimeout,
-		10, 9, 8,
+		10,9, 9, 8,
 		sv,
 		remoteSvc,
 		messageEncoder,
@@ -122,7 +122,7 @@ func TestNewHandlerService(t *testing.T) {
 }
 
 func TestHandlerServiceRegister(t *testing.T) {
-	svc := NewHandlerService(nil, nil, nil, nil, 0, 0, 0, 0, nil, nil, nil, nil)
+	svc := NewHandlerService(nil, nil, nil, nil, 0, 0,1, 0, 0, nil, nil, nil, nil)
 	err := svc.Register(&MyComp{}, []component.Option{})
 	assert.NoError(t, err)
 	defer func() { handlers = make(map[string]*component.Handler, 0) }()
@@ -142,7 +142,7 @@ func TestHandlerServiceRegister(t *testing.T) {
 }
 
 func TestHandlerServiceRegisterFailsIfRegisterTwice(t *testing.T) {
-	svc := NewHandlerService(nil, nil, nil, nil, 0, 0, 0, 0, nil, nil, nil, nil)
+	svc := NewHandlerService(nil, nil, nil, nil, 0, 0,1, 0, 0, nil, nil, nil, nil)
 	err := svc.Register(&MyComp{}, []component.Option{})
 	assert.NoError(t, err)
 	err = svc.Register(&MyComp{}, []component.Option{})
@@ -150,7 +150,7 @@ func TestHandlerServiceRegisterFailsIfRegisterTwice(t *testing.T) {
 }
 
 func TestHandlerServiceRegisterFailsIfNoHandlerMethods(t *testing.T) {
-	svc := NewHandlerService(nil, nil, nil, nil, 0, 0, 0, 0, nil, nil, nil, nil)
+	svc := NewHandlerService(nil, nil, nil, nil, 0, 0, 1,0, 0, nil, nil, nil, nil)
 	err := svc.Register(&NoHandlerRemoteComp{}, []component.Option{})
 	assert.Equal(t, errors.New("type NoHandlerRemoteComp has no exported methods of handler type"), err)
 }
@@ -176,7 +176,7 @@ func TestHandlerServiceProcessMessage(t *testing.T) {
 
 			mockConn := connmock.NewMockPlayerConn(ctrl)
 			sv := &cluster.Server{}
-			svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1, 1, 1, sv, &RemoteService{}, nil, nil)
+			svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1, 1,1, 1, sv, &RemoteService{}, nil, nil)
 
 			if table.err != nil {
 				mockSerializer.EXPECT().Marshal(table.err).Return([]byte("err"), nil)
@@ -228,7 +228,7 @@ func TestHandlerServiceLocalProcess(t *testing.T) {
 			mockConn := connmock.NewMockPlayerConn(ctrl)
 			packetEncoder := codec.NewPomeloPacketEncoder()
 			messageEncoder := message.NewMessagesEncoder(false)
-			svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1, 1, 1, nil, nil, nil, nil)
+			svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1,1, 1, 1, nil, nil, nil, nil)
 
 			if table.err != nil {
 				mockSerializer.EXPECT().Marshal(table.err)
@@ -261,7 +261,7 @@ func TestHandlerServiceProcessPacketHandshake(t *testing.T) {
 			mockConn := connmock.NewMockPlayerConn(ctrl)
 			packetEncoder := codec.NewPomeloPacketEncoder()
 			messageEncoder := message.NewMessagesEncoder(false)
-			svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1, 1, 1, nil, nil, nil, nil)
+			svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1, 1,1, 1, nil, nil, nil, nil)
 
 			mockConn.EXPECT().RemoteAddr().Return(&mockAddr{})
 			mockConn.EXPECT().Write(gomock.Any()).Do(func(d []byte) {
@@ -293,7 +293,7 @@ func TestHandlerServiceProcessPacketHandshakeAck(t *testing.T) {
 	mockConn := connmock.NewMockPlayerConn(ctrl)
 	packetEncoder := codec.NewPomeloPacketEncoder()
 	messageEncoder := message.NewMessagesEncoder(false)
-	svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1, 1, 1, nil, nil, nil, nil)
+	svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1, 1,1, 1, nil, nil, nil, nil)
 
 	mockConn.EXPECT().RemoteAddr().Return(&mockAddr{})
 	mockSerializer := serializemocks.NewMockSerializer(ctrl)
@@ -312,7 +312,7 @@ func TestHandlerServiceProcessPacketHeartbeat(t *testing.T) {
 	mockConn := connmock.NewMockPlayerConn(ctrl)
 	packetEncoder := codec.NewPomeloPacketEncoder()
 	messageEncoder := message.NewMessagesEncoder(false)
-	svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1, 1, 1, nil, nil, nil, nil)
+	svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1, 1,1, 1, nil, nil, nil, nil)
 
 	mockConn.EXPECT().RemoteAddr().Return(&mockAddr{})
 	mockSerializer := serializemocks.NewMockSerializer(ctrl)
@@ -350,7 +350,7 @@ func TestHandlerServiceProcessPacketData(t *testing.T) {
 			mockConn := connmock.NewMockPlayerConn(ctrl)
 			packetEncoder := codec.NewPomeloPacketEncoder()
 			messageEncoder := message.NewMessagesEncoder(false)
-			svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1, 1, 1, &cluster.Server{}, nil, nil, nil)
+			svc := NewHandlerService(nil, nil, nil, nil, 1*time.Second, 1, 1,1, 1, &cluster.Server{}, nil, nil, nil)
 			if table.socketStatus < constants.StatusWorking {
 				mockConn.EXPECT().RemoteAddr().Return(&mockAddr{})
 			}
@@ -380,7 +380,7 @@ func TestHandlerServiceHandle(t *testing.T) {
 	packetEncoder := codec.NewPomeloPacketEncoder()
 	packetDecoder := codec.NewPomeloPacketDecoder()
 	messageEncoder := message.NewMessagesEncoder(false)
-	svc := NewHandlerService(nil, packetDecoder, packetEncoder, mockSerializer, 1*time.Second, 1, 1, 1, nil, nil, messageEncoder, nil)
+	svc := NewHandlerService(nil, packetDecoder, packetEncoder, mockSerializer, 1*time.Second, 1, 1,1, 1, nil, nil, messageEncoder, nil)
 	var wg sync.WaitGroup
 
 	handshakeBuffer := `{"sys":{"platform":"mac","libVersion":"0.3.5-release","clientBuildNumber":"20","clientVersion":"2.1"},"user":{"age":30}}`

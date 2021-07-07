@@ -59,8 +59,8 @@ type (
 	// HandlerService service
 	HandlerService struct {
 		appDieChan         chan bool             // die channel app
-		chLocalProcess     chan unhandledMessage // channel of messages that will be processed locally
-		chRemoteProcess    chan unhandledMessage // channel of messages that will be processed remotely
+		chLocalProcess     []chan unhandledMessage // channel of messages that will be processed locally
+		chRemoteProcess    []chan unhandledMessage // channel of messages that will be processed remotely
 		decoder            codec.PacketDecoder   // binary decoder
 		encoder            codec.PacketEncoder   // binary encoder
 		heartbeatTimeout   time.Duration
@@ -89,6 +89,7 @@ func NewHandlerService(
 	serializer serialize.Serializer,
 	heartbeatTime time.Duration,
 	messagesBufferSize,
+	threads,
 	localProcessBufferSize,
 	remoteProcessBufferSize int,
 	server *cluster.Server,
@@ -98,8 +99,8 @@ func NewHandlerService(
 ) *HandlerService {
 	h := &HandlerService{
 		services:           make(map[string]*component.Service),
-		chLocalProcess:     make(chan unhandledMessage, localProcessBufferSize),
-		chRemoteProcess:    make(chan unhandledMessage, remoteProcessBufferSize),
+		chLocalProcess:     make([]chan unhandledMessage, 0,threads),
+		chRemoteProcess:    make([]chan unhandledMessage, 0,threads),
 		decoder:            packetDecoder,
 		encoder:            packetEncoder,
 		messagesBufferSize: messagesBufferSize,
@@ -112,6 +113,11 @@ func NewHandlerService(
 		metricsReporters:   metricsReporters,
 	}
 
+	for i:=0;i < threads;i++  {
+		h.chLocalProcess = append(h.chLocalProcess,make(chan unhandledMessage, localProcessBufferSize))
+		h.chRemoteProcess = append(h.chRemoteProcess,make(chan unhandledMessage, remoteProcessBufferSize))
+	}
+
 	return h
 }
 
@@ -120,14 +126,17 @@ func (h *HandlerService) Dispatch(thread int) {
 	// TODO: This timer is being stopped multiple times, it probably doesn't need to be stopped here
 	defer timer.GlobalTicker.Stop()
 
+	chLocalProcess := h.chLocalProcess[thread]
+	chRemoteProcess := h.chRemoteProcess[thread]
+
 	for {
 		// Calls to remote servers block calls to local server
 		select {
-		case lm := <-h.chLocalProcess:
+		case lm := <-chLocalProcess:
 			metrics.ReportMessageProcessDelayFromCtx(lm.ctx, h.metricsReporters, "local")
 			h.localProcess(lm.ctx, lm.agent, lm.route, lm.msg)
 
-		case rm := <-h.chRemoteProcess:
+		case rm := <-chRemoteProcess:
 			metrics.ReportMessageProcessDelayFromCtx(rm.ctx, h.metricsReporters, "remote")
 			h.remoteService.remoteProcess(rm.ctx, nil, rm.agent, rm.route, rm.msg)
 
@@ -294,11 +303,16 @@ func (h *HandlerService) processMessage(a *agent.Agent, msg *message.Message) {
 		route: r,
 		msg:   msg,
 	}
+	lIdx := int(a.Session.ID() % int64(len(h.chLocalProcess)))
+	rIdx := int(a.Session.ID() % int64(len(h.chRemoteProcess)))
+	chLocalProcess := h.chLocalProcess[lIdx]
+	chRemoteProcess := h.chRemoteProcess[rIdx]
+
 	if r.SvType == h.server.Type {
-		h.chLocalProcess <- message
+		chLocalProcess <- message
 	} else {
 		if h.remoteService != nil {
-			h.chRemoteProcess <- message
+			chRemoteProcess <- message
 		} else {
 			logger.Log.Warnf("request made to another server type but no remoteService running")
 		}
